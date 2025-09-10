@@ -7,6 +7,19 @@ from shared_client import start_client
 import importlib
 import os
 import sys
+from aiohttp import web
+import threading
+
+# Simple HTTP server for Render health checks
+async def handle(request):
+    return web.Response(text="🤖 Bot is running!")
+
+def run_web_server():
+    app = web.Application()
+    app.router.add_get('/', handle)
+    
+    port = int(os.environ.get("PORT", 10000))
+    web.run_app(app, host='0.0.0.0', port=port)
 
 async def load_and_run_plugins():
     await start_client()
@@ -20,6 +33,11 @@ async def load_and_run_plugins():
             await getattr(module, f"run_{plugin}_plugin")()  
 
 async def main():
+    # Start web server in a separate thread
+    web_thread = threading.Thread(target=run_web_server, daemon=True)
+    web_thread.start()
+    print(f"🌐 Web server started on port {os.environ.get('PORT', 10000)}")
+    
     await load_and_run_plugins()
     while True:
         await asyncio.sleep(1)  
